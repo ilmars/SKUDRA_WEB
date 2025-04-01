@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sweb-backend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sweb-backend
+  template:
+    metadata:
+      labels:
+        app: sweb-backend
+    spec:
+      containers:
+      - name: sweb-backend
+        # Replace with your built image: e.g., myregistry/sweb-backend:latest
+        image: sweb-backend:latest
+        ports:
+        - containerPort: 8000
