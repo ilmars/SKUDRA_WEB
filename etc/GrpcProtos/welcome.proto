@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+// import "google/protobuf/timestamp.proto";
+// import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+import "decimal_value.proto";
+import "shared_architecture.proto";
+
+option csharp_namespace = "VASES.GrpcProtos";
+
+package welcome_grpc;
+
+service WelcomeGrpc {
+  rpc Handshake(HandshakeRequest) returns (HandshakeReply);
+  rpc StreamReceiverList(google.protobuf.Empty)
+      returns (stream ReceiverListGrpc) {
+    option (google.api.http) = {
+      post: "/api/v1/receivers/stream"
+      body: "*"
+      additional_bindings {
+        post: "/api/v1/welcome/receiver/stream"
+        body: "*"
+      }
+    };
+  }
+}
+
+message ReceiverListGrpc {
+  repeated shared_architecture.ReceiverInfo receivers = 2;
+}
+
+message HandshakeRequest {
+  google.protobuf.StringValue username = 1;
+  google.protobuf.StringValue server_token = 2;
+  bool is_guest_user = 3;
+}
+
+message HandshakeReply {
+  repeated shared_architecture.ReceiverInfo receivers = 1;
+  decimal_value.DecimalValue longitude = 2;
+  decimal_value.DecimalValue latitude = 3;
+  bool user_has_access = 4;
+  string driver_name = 5;
+  google.protobuf.StringValue frontend_token = 6;
+  shared_architecture.SerializableDatabaseCredentials analysis_credentials = 7;
+}

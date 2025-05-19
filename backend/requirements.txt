@@ -1,6 +1,40 @@
 asgiref==3.8.1
-Django==4.2
-djangorestframework==3.14.0
 pytz==2025.2
 sqlparse==0.5.3
 typing_extensions==4.13.0
+
+# -- Core Framework & API --
+Django>=4.2,<5.0
+djangorestframework==3.16.0
+django-oauth-toolkit==1.7.0
+
+# -- Useful Django Add-Ons --
+django-cors-headers==4.7.0      # Allows cross-origin resource sharing for Vue
+django-debug-toolbar==5.1.0      # Debug info (disable in production)
+django-extensions==3.2.3         # Shell plus, etc.
+django-filter==23.2              # DRF filtering
+django-apscheduler==0.6.0        # Scheduled tasks, if needed
+django-leaflet==0.28.2         # Leaflet maps integration
+django-solo==2.4.0            # For singletons in Django admin
+
+# -- Environment Variable Management --
+python-decouple==3.8             # or django-dotenv==1.4.2 (pick only one)
+
+# -- Database --
+psycopg2-binary==2.9.6           # Postgres driver for dev
+
+# -- Production Server & Static Files --
+gunicorn==20.1.0
+whitenoise==6.5.0
+
+# -- HTTP & Misc --
+requests==2.31.0
+
+# -- Data/Analysis (Optional) --
+numpy==1.26.4
+pandas==2.0.3
+matplotlib==3.7.1
+
+# -- Geospatial (Optional) --
+geopy==2.3.0
+# pyproj==3.5.0

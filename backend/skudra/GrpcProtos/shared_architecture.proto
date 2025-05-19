@@ -1,0 +1,268 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+// import "google/protobuf/empty.proto";
+import "decimal_value.proto";
+
+option csharp_namespace = "VASES.GrpcProtos";
+
+package shared_architecture;
+
+enum ReceiverType {
+  SIGNAL_SHARK = 0;
+  ESMD = 1;
+  EB500 = 2;
+  DDF205 = 3;
+  DDF255 = 4;
+  ESMB = 5;
+  EB200 = 6;
+  EM200 = 7;
+  PR200 = 8;
+}
+
+enum SimpleModeBandwidthType {
+  NARROW = 0;
+  WIDE = 1;
+}
+
+enum SimpleModeMeasuringMode {
+  DIRECTION_FINDING = 0;
+  LEVELMETER = 1;
+}
+
+enum SimpleModeAntennaPolarization {
+  VERTICAL = 0;
+  HORIZONTAL = 1;
+}
+
+enum SimpleModeAntennaAttenuation {
+  PASSIVE = 0;
+  ACTIVE = 1;
+}
+
+enum ReceiverModeGrpc {
+  NULL = 0;
+  LEVEL_METER = 1;
+  BEARING = 2;
+  SCAN = 3;
+}
+
+message AudioDataGrpc {
+  int32 measurement_position = 1;
+  int32 number_of_frames = 2;
+  int32 silence_milliseconds = 5;
+  AudioFormatId format_id = 6;
+  bytes audio_frames = 7;
+  google.protobuf.Timestamp taken_at = 8;
+  int32 bytes_per_frame = 9;
+}
+
+enum AudioFormatId {
+  OFF = 0;
+  MODE_1 = 1;
+  MODE_2 = 2;
+  MODE_3 = 3;
+  MODE_4 = 4;
+  MODE_5 = 5;
+  MODE_6 = 6;
+  MODE_7 = 7;
+  MODE_8 = 8;
+  MODE_9 = 9;
+  MODE_10 = 10;
+  MODE_11 = 11;
+  MODE_12 = 12;
+}
+
+message SpectrumGrpc {
+  repeated double spectrum_data = 1;
+  google.protobuf.StringValue spectrum_type = 2;
+}
+
+message MeasurementDataGrpc {
+  MeasurementConfigGrpc measurement_config = 1;
+  shared_architecture.ReceiverModeGrpc receiver_mode = 2;
+  repeated SpectrumGrpc spectra = 3;
+  google.protobuf.StringValue level_unit = 4;
+  double starting_frequency = 5;
+  double frequency_step = 6;
+  google.protobuf.DoubleValue center_frequency = 7;
+  double span = 8;
+  google.protobuf.DoubleValue bandwidth = 9;
+  google.protobuf.DoubleValue channel_power = 10;
+  bool valid_bearing = 11;
+  decimal_value.DecimalValue bearing = 12;
+  google.protobuf.DoubleValue level = 13;
+  google.protobuf.DoubleValue df_level = 14;
+  google.protobuf.DoubleValue elevation = 15;
+  google.protobuf.Timestamp taken_at = 16;
+  google.protobuf.DoubleValue offset = 17;
+  decimal_value.DecimalValue latitude = 18;
+  decimal_value.DecimalValue longitude = 19;
+  google.protobuf.DoubleValue fm = 20;
+  google.protobuf.DoubleValue am = 21;
+  google.protobuf.DoubleValue quality = 22;
+  RdsDataGrpc rds = 23;
+  google.protobuf.StringValue level_type = 24;
+  repeated EsmdDatagramTagGrpc contained_esmd_tags = 25;
+  bool software_squelch_effect = 26;
+}
+
+message MeasurementConfigGrpc {
+  int32 id = 1;
+  google.protobuf.StringValue measurement_name = 2;
+  shared_architecture.ReceiverModeGrpc receiver_mode = 3;
+  google.protobuf.StringValue device_name = 4;
+  google.protobuf.StringValue username = 5;
+  AudioFormatId audio_format_id = 6;
+  shared_architecture.ReceiverType receiver_type = 7;
+  repeated double frequencies_to_measure = 8;
+  decimal_value.DecimalValue hold_time_seconds = 9;
+  bool measure_audio = 10;
+  bool measure_bearing = 11;
+  bool measure_level = 12;
+  bool measure_direction_finder_level = 13;
+  bool measure_spectrum = 14;
+  bool measure_bandwidth = 15;
+  bool measure_channel_power = 16;
+  bool measure_offset = 17;
+  bool measure_quality = 18;
+  // bool measure_elevation is not used while displaying measured
+  // shared_architecture. Instead, measure_bearing determines this.
+  bool measure_elevation = 19;
+  bool measure_rds = 20;
+  bool measure_location = 21;
+  FmTypeGrpc fm_type = 22;
+  AmTypeGrpc am_type = 23;
+  bool save_to_database = 24;
+  repeated LicenseCollectionGrpc licenses = 25;
+}
+
+enum FmTypeGrpc {
+  FM_OFF = 0;
+  FM = 1;
+  FM_POSITIVE = 2;
+  FM_NEGATIVE = 3;
+  PM = 4;
+  FM_RMS = 5;
+}
+
+enum AmTypeGrpc {
+  AM_OFF = 0;
+  AM = 1;
+  AM_POSITIVE = 2;
+  AM_NEGATIVE = 3;
+  AM_RMS = 4;
+}
+
+enum EsmdDatagramTagGrpc {
+  FScan = 0;
+  Audio = 1;
+  IFPan = 2;
+  CW = 3;
+  IF = 4;
+  DFPan = 5;
+  GPSCompass = 6;
+}
+
+message RadioLicenseGrpc {
+  int32 id = 1;
+  google.protobuf.DoubleValue frequency_from = 2;
+  google.protobuf.DoubleValue frequency_to = 3;
+  google.protobuf.Timestamp valid_from = 4;
+  google.protobuf.Timestamp valid_to = 5;
+  google.protobuf.StringValue company = 6;
+  google.protobuf.StringValue comment = 7;
+  google.protobuf.StringValue number = 8;
+  google.protobuf.DoubleValue latitude = 9;
+  google.protobuf.DoubleValue longitude = 10;
+  google.protobuf.StringValue emi = 11;
+  google.protobuf.DoubleValue power = 12;
+  google.protobuf.StringValue height_eff = 13;
+  google.protobuf.StringValue status = 14;
+  google.protobuf.StringValue zone = 15;
+  google.protobuf.StringValue version = 16;
+}
+
+message LicenseCollectionGrpc {
+  int32 id = 1;
+  double associated_frequency = 2;
+  bool is_valid = 3;
+  repeated RadioLicenseGrpc radio_licenses = 4;
+}
+
+message RdsDataGrpc {
+  bool stereo_pilot_tone_detected = 1;
+  bool ari_carrier_detected = 2;
+  bool rds_synchronized = 3;
+  google.protobuf.StringValue program_identifier = 4;
+  bool traffic_radio_transmitter = 5;
+  bool traffic_announcement_running = 6;
+  bool music_not_speech = 7;
+  google.protobuf.StringValue decoder_information = 8;
+  google.protobuf.StringValue program_string_name = 9;
+  google.protobuf.StringValue radio_text = 10;
+}
+
+message MeasuringStoppedReply { google.protobuf.StringValue reason = 1; }
+
+message MeasurementStreamDataGrpc {
+  AudioDataGrpc audio_data = 1;
+  MeasurementDataGrpc measurement_data = 2;
+  MeasuringStoppedReply measuring_stopped_reply = 3;
+  MeasuringScheduleGrpc active_measuring_schedule = 4;
+  MeasurementConfigGrpc active_direct_measurement_config = 5;
+}
+
+message MeasuringScheduleItemGrpc {
+  int32 id = 1;
+  google.protobuf.Duration item_duration = 2;
+  google.protobuf.Timestamp item_end_time = 3;
+  int32 measuring_schedule_id = 4;
+  // MeasuringPresetGrpc measuring_preset = 5;
+  google.protobuf.Int32Value measuring_preset_id = 6;
+  repeated double override_frequencies_to_measure = 7;
+  MeasuringScheduleGrpc parent_measuring_schedule = 8;
+}
+
+message MeasuringScheduleGrpc {
+  int32 id = 1;
+  google.protobuf.Timestamp starting_time = 2;
+  bool save_to_database = 3;
+  google.protobuf.Int32Value active_schedule_item_index = 4;
+  repeated MeasuringScheduleItemGrpc schedule_items = 5;
+  google.protobuf.StringValue schedule_name = 6;
+}
+
+message ReceiverInfo {
+  int32 id = 1;
+  google.protobuf.StringValue name = 2;
+  DeviceState state = 3;
+  ReceiverType type = 4;
+}
+
+enum DeviceState {
+  LOADING = 0;
+  DISABLED = 1;
+  UNAVAILABLE = 2;
+  READY = 3;
+  BUSY = 4;
+  MEASURING = 5;
+  TYPE_MISMATCH = 6;
+  OFFLINE = 7;
+  IS_MANUAL_DEVICE = 8;
+  NOT_INITIALIZED = 9;
+  BUSY_MEASURING = 10;
+  PREPARING_TO_MEASURE = 11;
+}
+
+message SerializableDatabaseCredentials {
+  google.protobuf.StringValue host = 1;
+  int32 port = 2;
+  google.protobuf.StringValue username = 3;
+  google.protobuf.StringValue password = 4;
+  google.protobuf.StringValue database = 5;
+  bool remote_connections_allowed = 6;
+  bool statistical_map_feature_enabled = 7;
+}

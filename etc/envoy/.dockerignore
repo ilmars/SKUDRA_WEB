@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# Allow proto files
+!GrpcProtos/*.proto
+
+# Allow Envoy configuration
+!envoy/envoy.yaml 
