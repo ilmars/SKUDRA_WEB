@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sweb-frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sweb-frontend
+  template:
+    metadata:
+      labels:
+        app: sweb-frontend
+    spec:
+      containers:
+      - name: sweb-frontend
+        # Replace with your built image: e.g., myregistry/sweb-frontend:latest
+        image: sweb-frontend:latest
+        ports:
+        - containerPort: 80

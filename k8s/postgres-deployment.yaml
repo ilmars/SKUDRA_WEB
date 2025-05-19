@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sweb-postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sweb-postgres
+  template:
+    metadata:
+      labels:
+        app: sweb-postgres
+    spec:
+      containers:
+      - name: sweb-postgres
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: swebdb
+        - name: POSTGRES_USER
+          value: swebuser
+        - name: POSTGRES_PASSWORD
+          value: swebpass
+        ports:
+        - containerPort: 5432
