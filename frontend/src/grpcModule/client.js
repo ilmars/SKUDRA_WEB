@@ -1,30 +1,35 @@
+import * as welcome from './generated/welcome_pb.js';
+import * as shared_architecture from './generated/shared_architecture_pb.js';
+
 // Constants for device states and receiver types
 export const DeviceState = {
-  LOADING: 'LOADING',
-  DISABLED: 'DISABLED',
-  UNAVAILABLE: 'UNAVAILABLE',
-  READY: 'READY',
-  BUSY: 'BUSY',
-  MEASURING: 'MEASURING',
-  TYPE_MISMATCH: 'TYPE_MISMATCH',
-  OFFLINE: 'OFFLINE',
-  IS_MANUAL_DEVICE: 'IS_MANUAL_DEVICE',
-  NOT_INITIALIZED: 'NOT_INITIALIZED',
-  BUSY_MEASURING: 'BUSY_MEASURING',
-  PREPARING_TO_MEASURE: 'PREPARING_TO_MEASURE'
+  0: 'LOADING',
+  1: 'DISABLED',
+  2: 'UNAVAILABLE',
+  3: 'READY',
+  4: 'BUSY',
+  5: 'MEASURING',
+  6: 'TYPE_MISMATCH',
+  7: 'OFFLINE',
+  8: 'IS_MANUAL_DEVICE',
+  9: 'NOT_INITIALIZED',
+  10: 'BUSY_MEASURING',
+  11: 'PREPARING_TO_MEASURE'
 };
 
 export const ReceiverType = {
-  SIGNAL_SHARK: 'SIGNAL_SHARK',
-  ESMD: 'ESMD',
-  EB500: 'EB500',
-  DDF205: 'DDF205',
-  DDF255: 'DDF255',
-  ESMB: 'ESMB',
-  EB200: 'EB200',
-  EM200: 'EM200',
-  PR200: 'PR200'
+  0: 'SIGNAL_SHARK',
+  1: 'ESMD',
+  2: 'EB500',
+  3: 'DDF205',
+  4: 'DDF255',
+  5: 'ESMB',
+  6: 'EB200',
+  7: 'EM200',
+  8: 'PR200'
 };
+
+
 
 export class ApiClient {
   constructor(baseUrl = 'http://localhost:9090') {
@@ -77,7 +82,7 @@ export class ApiClient {
       "x-device-id": id,                      // match backend expectation
       "x-device-ip": deviceIp,
       "x-device-port": String(devicePort),
-      token,                                // <- header name is literally “token”
+      "token": this.token                                // <- header name is literally “token”
     };
 
     const ctrl = new AbortController();
@@ -91,6 +96,7 @@ export class ApiClient {
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        console.log("stream opened", res);
 
         const reader = res.body.getReader();
         const dec = new TextDecoder();
@@ -98,28 +104,32 @@ export class ApiClient {
 
         const pump = () =>
           reader.read().then(({ done, value }) => {
-            if (done) return console.log("stream closed");
-            buf += dec.decode(value, { stream: true });
+            if (done) return;
 
-            // frames arrive as JSON objects separated by newlines \n
-            const parts = buf.split("\n");
-            buf = parts.pop();                 // keep partial frame
-            parts.forEach((json) => {
-              if (!json) return;
-              try {
-                const { receivers } = JSON.parse(json);
-                onData(
-                  receivers.map((r) => ({
-                    id: r.id,
-                    name: r.name,
-                    state: DeviceState[r.state] ?? "UNKNOWN",
-                    type: ReceiverType[r.type] ?? "UNKNOWN",
-                  })),
-                );
-              } catch (e) {
-                onError?.(e);
+            try {
+              // gRPC-Web: first byte is flags, next 4 bytes is message length (big-endian)
+              if (value.length < 5) throw new Error("Frame too short");
+              const msgLen = (value[1] << 24) | (value[2] << 16) | (value[3] << 8) | value[4];
+              const msgBytes = value.slice(5, 5 + msgLen);
+
+              // Make sure shared_architecture is initialized before use
+              if (!welcome.proto.shared_architecture) {
+                welcome.proto.shared_architecture = shared_architecture.proto.shared_architecture;
               }
-            });
+
+              const message = welcome.proto.welcome_grpc.ReceiverListGrpc.deserializeBinary(msgBytes);
+              const receivers = message.getReceiversList().map(r => ({
+                all: r.toObject(),
+                id: r.getId(),
+                name: r.getName().getValue(),
+                state: DeviceState[r.getState()] ?? "UNKNOWN",
+                type: ReceiverType[r.getType()] ?? "UNKNOWN",
+              }));
+              onData(receivers);
+            } catch (e) {
+              console.error('Stream error details:', e);
+              onError?.(e);
+            }
 
             pump();
           })

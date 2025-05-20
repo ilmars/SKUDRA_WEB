@@ -72,7 +72,7 @@ export default {
         const serverToken = props.serverToken || ''; // Assuming serverToken might be a prop
         const isGuestUser = props.isGuestUser !== undefined ? props.isGuestUser : false; // Assuming isGuestUser might be a prop
 
-        await client.handshake(
+        const token = await client.handshake(
           props.deviceId, 
           username, 
           serverToken, 
@@ -80,6 +80,7 @@ export default {
           props.deviceIp, 
           props.devicePort
         );
+        console.log("got token:", token);
         // Now that handshake is complete and token is stored in the client, start the stream
         startStreamLogic();
       } catch (error) {
