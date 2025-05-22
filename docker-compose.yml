@@ -1,41 +1,51 @@
 version: "3.9"
 services:
 
-  # backend:
-  #   build: ./backend
-  #   container_name: sweb_backend
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     - db
-  #   environment:
-  #     DJANGO_SETTINGS_MODULE: sweb.settings
-  #   # For local dev, you might mount code if you want hot reload
-  #   # volumes:
-  #   #   - ./backend:/app
+  backend:
+    build: ./backend
+    container_name: sweb_backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DJANGO_SETTINGS_MODULE: sweb.settings
+    env_file: 
+      - ./backend/.env
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # For local dev, you might mount code if you want hot reload
+    # volumes:
+    #   - ./backend:/app
 
-  # frontend:
-  #   build: ./frontend
-  #   container_name: sweb_frontend
-  #   ports:
-  #     - "3000:3000"  # Changed from 8080 to avoid conflict with Envoy
-  #   environment:
-  #     - VITE_API_URL=http://localhost:9090  # Updated to point to new Envoy port
-  #   depends_on:
-  #     - envoy
-  #   # For local dev, you might mount code if you want hot reload
-  #   # volumes:
-  #   #   - ./frontend:/app
+  frontend:
+    build: ./frontend
+    container_name: sweb_frontend
+    ports:
+      - "3000:3000"  # Changed from 8080 to avoid conflict with Envoy
+    environment:
+      - VITE_API_URL=http://localhost:9090  # Updated to point to new Envoy port
+    depends_on:
+      - envoy
+      - backend
+    # For local dev, you might mount code if you want hot reload
+    # volumes:
+    #   - ./frontend:/app
 
-  # db:
-  #   image: postgres:15
-  #   container_name: sweb_db
-  #   environment:
-  #     POSTGRES_DB: swebdb
-  #     POSTGRES_USER: swebuser
-  #     POSTGRES_PASSWORD: swebpass
-  #   ports:
-  #     - "5432:5432"
+  db:
+    image: postgres:15
+    container_name: sweb_db
+    environment:
+      POSTGRES_DB: swebdb
+      POSTGRES_USER: swebuser
+      POSTGRES_PASSWORD: swebpass
+    env_file:
+      - ./db/.env
+    ports:
+      - "5432:5432"
 
   envoy:
     build:
