@@ -1,0 +1,209 @@
+static_resources:
+  listeners:
+  - name: grpc_web_listener
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 9090 }
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: grpc_json_transcoder
+          codec_type: auto
+          stream_idle_timeout: 0s
+
+          access_log:
+          - name: envoy.access_loggers.stdout
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+              log_format:
+                text_format_source:
+                  inline_string: "[%START_TIME%] %REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL% %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%\n"
+
+          ################################################################
+          #                       ROUTE CONFIG                           #
+          ################################################################
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+
+              # ---------- CORS POLICY (applies to every route) ----------
+              typed_per_filter_config:
+                envoy.filters.http.cors:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+                  allow_methods: "GET, PUT, DELETE, POST, OPTIONS"
+                  allow_headers: >-
+                    keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout,x-device-id,x-device-ip,x-device-port,authorization,accept,origin,sec-fetch-site,sec-fetch-mode,sec-fetch-dest,referer,device-port,device-ip,token
+                  allow_origin_string_match:
+                    - safe_regex: { google_re2: {}, regex: ".*" }
+                  allow_credentials: true
+                  max_age: "1728000"
+              # ----------------------------------------------------------
+
+              routes:
+              # ────────────────── Catch-all pre-flight ──────────────────
+              - name: preflight_catch_all
+                match:
+                  prefix: "/"                             # any path
+                  headers:
+                    - name: ":method"
+                      string_match: { exact: "OPTIONS" }  # only OPTIONS
+                route:
+                  cluster: test_service_cluster           # never reached
+                  timeout: 0s
+                  idle_timeout: 0s
+
+              # Test service route
+              - name: test_service_route
+                match:
+                  path: "/v1/testcall"
+                  headers:
+                    - name: ":method"
+                      string_match: { exact: "GET" }
+                route:
+                  cluster: test_service_cluster
+                  timeout: 30s
+
+              # Handshake route for device1
+              - name: device1_handshake
+                match:
+                  path: "/api/v1/handshake"
+                  headers:
+                    - name: ":method"
+                      string_match: { exact: "POST" }
+                    - name: "x-device-id"
+                      string_match: { exact: "device1" }
+                route:
+                  cluster: device1_cluster
+                  timeout: 30s
+
+              # Handshake route for device2
+              - name: device2_handshake
+                match:
+                  path: "/api/v1/handshake"
+                  headers:
+                    - name: ":method"
+                      string_match: { exact: "POST" }
+                    - name: "x-device-id"
+                      string_match: { exact: "device2" }
+                route:
+                  cluster: device2_cluster
+                  timeout: 30s
+
+              # Streaming for device1
+              - name: device1_stream
+                match:
+                  path: "/api/v1/receivers/stream"
+                  query_parameters:
+                    - name: "deviceId"
+                      string_match: { exact: "device1" }
+                response_headers_to_add:
+                  - header: { key: "Content-Type", value: "application/json" }   # not text/event-stream
+                route:
+                  cluster: device1_cluster
+                  timeout: 0s
+                  idle_timeout: 0s
+
+              # Streaming for device2
+              - name: device2_stream
+                match:
+                  path: "/api/v1/receivers/stream"
+                  query_parameters:
+                    - name: "deviceId"
+                      string_match: { exact: "device2" }
+                  headers:
+                    - name: ":method"
+                      string_match: { exact: "GET" }
+                response_headers_to_add:
+                  - header: { key: "Content-Type", value: "text/event-stream" }
+                  - header: { key: "Transfer-Encoding", value: "chunked" }
+                  - header: { key: "Cache-Control", value: "no-cache" }
+                  - header: { key: "Connection", value: "keep-alive" }
+                route:
+                  cluster: device2_cluster
+                  timeout: 0s
+                  idle_timeout: 0s
+
+          ################################################################
+          #                       HTTP FILTERS                            #
+          ################################################################
+          http_filters:
+          - name: envoy.filters.http.cors        # enabled (empty config)
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+
+          - name: envoy.filters.http.grpc_json_transcoder
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
+              proto_descriptor: "/etc/envoy/test_proto.pb"
+              services:
+                - "welcome_grpc.WelcomeGrpc"
+                - "simple_mode_grpc.SimpleModeGrpc"
+                - "advanced_mode_grpc.AdvancedModeGrpc"
+              print_options:
+                add_whitespace: true
+                always_print_primitive_fields: true
+                always_print_enums_as_ints: false
+                preserve_proto_field_names: true
+              match_incoming_request_route: true
+              ignore_unknown_query_parameters: true
+              auto_mapping: true
+              convert_grpc_status: true
+
+          - name: envoy.filters.http.grpc_web
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  #######################################################################
+  #                               CLUSTERS                             #
+  #######################################################################
+  clusters:
+  - name: test_service_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: test_service_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address: { address: 10.0.222.39, port_value: 19010 }
+
+  - name: device1_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: device1_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address: { address: 10.0.222.39, port_value: 19010 }
+
+  - name: device2_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: device2_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address: { address: 10.0.222.129, port_value: 19010 }
+
+admin:
+  access_log_path: "/dev/stdout"
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 9901 }

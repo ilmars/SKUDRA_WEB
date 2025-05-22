@@ -1,0 +1,16 @@
+syntax = "proto3";
+package test_service;
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+message TestMessage {
+  string content = 1;
+}
+
+service TestGrpcService {
+  rpc TestCall(google.protobuf.Empty) returns (TestMessage) {
+    option (google.api.http) = {
+      get: "/v1/testcall"
+    };
+  }
+}

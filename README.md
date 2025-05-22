@@ -1,69 +1,3 @@
-<<<<<<< HEAD
-# SWEB Project
-
-This project allows **local development** with:
-1. **Python venv** in backend/
-2. **Node-based** dev in frontend/
-
-And also provides **production** setups:
-- Dockerfiles for both backend & frontend
-- docker-compose.yml (optional local usage)
-- K8s manifests in k8s/ (for real production environments)
-
----
-
-## Local Dev Steps
-
-### Backend (Django)
-1. `cd backend`
-2. `source venv/bin/activate`
-3. `python manage.py runserver`
-4. Visit `http://localhost:8000`
-
-### Frontend (Vue)
-1. `cd frontend`
-2. `npm run dev` (or `npm run serve`, depending on the Vue version)
-3. Visit `http://localhost:5173` (or whichever port is shown)
-
----
-
-## Docker Compose (Optional)
-
-1. `docker-compose build`
-2. `docker-compose up`
-   - `backend` -> http://localhost:8000
-   - `frontend` -> http://localhost:8080
-
----
-
-## Kubernetes (Production)
-
-1. **Build & Push** your images:
-   ```
-   cd backend
-   docker build -t myregistry/sweb-backend:latest .
-   docker push myregistry/sweb-backend:latest
-
-   cd ../frontend
-   docker build -t myregistry/sweb-frontend:latest .
-   docker push myregistry/sweb-frontend:latest
-   ```
-
-2. **Update** `k8s/backend-deployment.yaml` and `k8s/frontend-deployment.yaml` to use:
-   ```
-   image: myregistry/sweb-backend:latest
-   image: myregistry/sweb-frontend:latest
-   ```
-
-3. **Apply**:
-   ```
-   kubectl apply -f k8s/
-   ```
-
-4. **Ingress**: For `sweb.local`, either add a hosts entry or use a real domain with an Nginx Ingress controller.
-
-Enjoy your full local dev + production environment setup!
-=======
 # SKUDRA WEB Project
 ## Project Scope
 
@@ -138,4 +72,126 @@ aiming to be deployable via Docker or Kubernetes.
   ```shell
   kubectl apply -f k8s/
   ```
->>>>>>> main
+# gRPC-Web JavaScript Code Generation Setup (WSL)
+
+This guide describes how to install dependencies, build the `protoc-gen-grpc-web` plugin using Bazel, and generate JavaScript + gRPC-Web bindings from `.proto` files.
+
+---
+
+## Prerequisites
+
+### 1. Update & Install System Tools
+
+```bash
+sudo apt update
+sudo apt install -y protobuf-compiler nodejs npm curl gnupg
+```
+
+### 2. Install `grpc-web` JavaScript Generator
+
+```bash
+sudo npm install -g grpc-web
+```
+
+Check your installed version:
+
+```bash
+protoc --version
+```
+
+---
+
+## Install Bazel
+
+```bash
+curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
+sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
+echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+sudo apt update && sudo apt install -y bazel
+```
+
+---
+
+## Build `protoc-gen-grpc-web` Plugin
+
+```bash
+git clone https://github.com/grpc/grpc-web.git
+cd grpc-web
+bazel build javascript/net/grpc/web/generator/:protoc-gen-grpc-web
+```
+
+Copy the binary to your PATH:
+
+```bash
+sudo cp bazel-bin/javascript/net/grpc/web/generator/protoc-gen-grpc-web /usr/local/bin/
+sudo chmod +x /usr/local/bin/protoc-gen-grpc-web
+```
+
+Verify it's available:
+
+```bash
+which protoc-gen-grpc-web
+```
+
+---
+
+## 📁 Project Directory Setup
+
+Make sure your project structure looks like this:
+
+```
+your-project/
+├── etc/
+│   └── GrpcProtos/
+│       ├── simple_mode_grpc.proto
+│       ├── advanced_mode_grpc.proto
+├── frontend/
+│   └── src/
+│       └── grpc/   # <-- Generated files go here
+```
+
+---
+
+## 🚀 Generate gRPC-Web Code
+
+From inside `etc/GrpcProtos`:
+
+```bash
+cd /path/to/etc/GrpcProtos
+
+protoc -I=. simple_mode_grpc.proto \
+  --js_out=import_style=commonjs:../../frontend/src/grpc \
+  --grpc-web_out=import_style=commonjs,mode=grpcwebtext:../../frontend/src/grpc
+
+protoc -I=. advanced_mode_grpc.proto \
+  --js_out=import_style=commonjs:../../frontend/src/grpc \
+  --grpc-web_out=import_style=commonjs,mode=grpcwebtext:../../frontend/src/grpc
+
+
+protoc -I=. common.proto   --js_out=import_style=commonjs:../../frontend/src/grpc   --grpc-web_out=import_style=commonjs,mode=grpcwebtext:../../frontend/src/grpc
+
+protoc -I=. decimal_value.proto   --js_out=import_style=commonjs:../../frontend/src/grpc   --grpc-web_out=import_style=commonjs,mode=grpcwebtext:../../frontend/src/grpc
+
+protoc -I=. shared_architecture.proto   --js_out=import_style=commonjs:../../frontend/src/grpc   --grpc-web_out=import_style=commonjs,mode=grpcwebtext:../../frontend/src/grpc
+
+protoc -I=. welcome.proto   --js_out=import_style=commonjs:../../frontend/src/grpc   --grpc-web_out=import_style=commonjs,mode=grpcwebtext:../../frontend/src/grpc
+
+```
+
+
+```
+python -m grpc_tools.protoc -IC:'/Users/ilmarsl/Development/SKUDRA WEB/SKUDRA WEB/backend/env/Lib/site-packages/grpc_tools/_proto' -Ietc/GrpcProtos --python_out=etc/GrpcProtos --grpc_python_out=etc/GrpcProtos --descriptor_set_out=etc/envoy/proto.pb etc/GrpcProtos/advanced_mode_grpc.proto etc/GrpcProtos/common.proto etc/GrpcProtos/welcome.proto etc/GrpcProtos/simple_mode_grpc.proto etc/GrpcProtos/decimal_value.proto etc/GrpcProtos/shared_architecture.proto
+```
+
+---
+
+## ✅ Output
+
+The following files will be generated in:
+
+```bash
+frontend/src/grpc/
+```
+
+You can now import them in your frontend application.
+

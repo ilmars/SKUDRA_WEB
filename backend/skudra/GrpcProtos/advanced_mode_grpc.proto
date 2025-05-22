@@ -1,0 +1,294 @@
+﻿syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+// import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+import "decimal_value.proto";
+import "shared_architecture.proto";
+
+option csharp_namespace = "VASES.GrpcProtos";
+
+package advanced_mode_grpc;
+
+service AdvancedModeGrpc {
+  rpc AdvancedModeHandshake(AdvancedModeHandshakeRequest)
+      returns (AdvancedModeHandshakeReply);
+  rpc ReplyConnectReceiver(ConnectReceiverRequest)
+      returns (ConnectReceiverReply);
+  rpc StreamMeasurements(google.protobuf.Empty)
+      returns (stream shared_architecture.MeasurementStreamDataGrpc);
+  rpc ReplyEnableLivestreaming(google.protobuf.Empty)
+      returns (google.protobuf.Empty);
+  rpc ReplyDisableLivestreaming(google.protobuf.Empty)
+      returns (google.protobuf.Empty);
+  rpc RequestAllSettings(AllSettingsRequest) returns (AllSettingsReply);
+  rpc RequestToChangeReceiverSetting(ChangeReceiverSettingRequest)
+      returns (AllSettingsReply);
+  rpc RequestAntennaList(google.protobuf.Empty) returns (AntennaListReply);
+  rpc RequestChangeAntenna(SwitchAntennaRequest) returns (AntennaListReply);
+  rpc RequestMeasuringPresetList(google.protobuf.Empty)
+      returns (MeasuringPresetListReply);
+  rpc RequestChangeDeviceMode(ChangeDeviceModeRequest)
+      returns (ChangeDeviceModeReply);
+  rpc RequestScpiExecution(ScpiExecutionRequest) returns (ScpiExecutionReply);
+  rpc RequestStartScheduledMeasuring(StartScheduledMeasuringRequest)
+      returns (google.protobuf.Empty);
+  rpc RequestStartDirectMeasuring(StartDirectMeasuringRequest)
+      returns (google.protobuf.Empty);
+  rpc RequestStopMeasuring(google.protobuf.Empty) returns (StopMeasuringReply);
+  rpc RequestPresetDevice(google.protobuf.Empty)
+      returns (google.protobuf.Empty);
+  rpc RequestRotatorAlignment(RotatorAlignmentRequest)
+      returns (RotatorAlignmentReply);
+  rpc RequestRotatorStop(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc RequestStoreMeasuringPreset(StoreMeasuringPresetRequest)
+      returns (MeasuringPresetListReply);
+  rpc RequestDeleteMeasuringPreset(DeleteMeasuringPresetRequest)
+      returns (google.protobuf.Empty);
+  rpc RequestUpdateMeasuringPreset(UpdateMeasuringPresetRequest)
+      returns (MeasuringPresetListReply);
+  rpc RequestRemoteMode(RemoteModeRequest) returns (google.protobuf.Empty);
+  rpc RequestApplyMeasuringPreset(ApplyMeasuringPresetRequest)
+      returns (ApplyMeasuringPresetReply);
+  rpc RequestRecording(RecordingRequest) returns (RecordingReply);
+  rpc RequestDisconnect(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc RequestCurrentAlignment(google.protobuf.Empty)
+      returns (RotatorAlignmentReply);
+  rpc RequestNewSimpleModePresetCreation(NewSimpleModePresetCreationRequestGrpc)
+      returns (google.protobuf.Empty);
+}
+
+message AdvancedModeHandshakeRequest {
+  google.protobuf.StringValue username = 1;
+  google.protobuf.StringValue server_token = 2;
+  bool is_guest_user = 3;
+}
+
+message AdvancedModeHandshakeReply {
+  decimal_value.DecimalValue longitude = 1;
+  decimal_value.DecimalValue latitude = 2;
+  bool user_has_access = 3;
+  string driver_name = 4;
+  google.protobuf.StringValue frontend_token = 5;
+  repeated shared_architecture.ReceiverInfo receivers = 6;
+}
+
+//(Empty messages)
+// message StreamMeasurementsRequest {}
+// message ChangeMultipleReceiverSettingsRequest{}
+// message AntennaListRequest {}
+// message StopMeasuringRequest {}
+// message PresetDeviceRequest {}
+// message PresetDeviceReply {}
+// message RotatorStopRequest {}
+// message MeasuringPresetListRequest {}
+//(End empty messages)
+
+message RecordingReply {
+  bool is_measuring = 1;
+  shared_architecture.MeasurementConfigGrpc updated_direct_measurement_config =
+      2;
+  shared_architecture.MeasuringScheduleGrpc updated_schedule = 3;
+}
+
+message RecordingRequest {
+  google.protobuf.StringValue measurement_name = 1;
+  bool is_enable_recording_requested = 2;
+}
+
+message ConnectReceiverRequest { int32 receiverId = 1; }
+
+message ReceiverCapabilitiesGrpc {
+  int32 id = 1;
+  // BuiltInCompass built_in_compass = 2;
+  // BuiltInGps built_in_gps = 3;
+  bool direction_finding = 4;
+  bool itu = 5;
+  // DfModuleType df_module_type = 6;
+  google.protobuf.StringValue df_com_port = 7;
+  bool is_rotator_attached = 8;
+  bool panorama_scan = 9;
+  int32 geographical_details_id = 10;
+  // GeographicalDetails geographical_details = 11;
+  // ReceiverAccess receiver_access = 12;
+  int32 receiver_access_id = 13;
+}
+
+message ConnectReceiverReply {
+  bool success = 1;
+  int32 receiver_id = 2;
+  google.protobuf.StringValue device_idn_string = 3;
+  shared_architecture.DeviceState device_state = 4;
+  shared_architecture.ReceiverInfo device_info = 5;
+  bool measuring_is_active = 6;
+  ReceiverCapabilitiesGrpc receiver_capabilities = 7;
+  AntennaListReply antenna_list = 8;
+  shared_architecture.MeasuringScheduleGrpc last_used_measuring_schedule = 9;
+  shared_architecture.MeasurementConfigGrpc last_used_measurement_config = 10;
+  shared_architecture.ReceiverModeGrpc receiver_mode = 11;
+}
+
+message UserInformation {
+  bool is_guest_user = 1;
+  google.protobuf.StringValue username = 2;
+  google.protobuf.StringValue password = 3;
+  bool remember_me = 4;
+}
+
+message PossibleSettingValues { map<string, string> values = 1; }
+
+message AllSettingsRequest {}
+
+message AllSettingsReply {
+  map<int32, string> settings = 1;
+  map<int32, PossibleSettingValues> possible_setting_values = 2;
+  google.protobuf.Int32Value requested_key = 3;
+}
+
+message ChangeReceiverSettingRequest {
+  int32 settingKey = 1;
+  google.protobuf.StringValue setting_value = 2;
+}
+
+message AntennaListReply {
+  repeated AntennaAccessGrpc antenna_accesses = 1;
+  google.protobuf.Int32Value connected_antenna_id = 2;
+  bool is_rotator_attached = 3;
+}
+
+message AntennaAccessGrpc {
+  int32 id = 1;
+  google.protobuf.StringValue name = 2;
+  PolarizationGrpc polarization = 3;
+  google.protobuf.DoubleValue min_frequency = 4;
+  google.protobuf.DoubleValue max_frequency = 5;
+}
+
+enum PolarizationGrpc {
+  Vertical = 0;
+  Horizontal = 1;
+  VerticalAndHorizontal = 2;
+}
+
+message SwitchAntennaRequest { google.protobuf.Int32Value antenna_id = 1; }
+
+message ReceiverAccessGrpc {
+  int32 id = 1;
+  google.protobuf.StringValue name = 2;
+  google.protobuf.StringValue ip_address = 3;
+  int32 url_port = 4;
+  ReceiverCapabilitiesGrpc receiver_capabilities = 5;
+  shared_architecture.DeviceState receiver_state = 6;
+  shared_architecture.ReceiverType receiver_type = 7;
+}
+
+message NewSimpleModePresetCreationRequestGrpc {
+  google.protobuf.DoubleValue minFrequencyHz = 1;
+  google.protobuf.DoubleValue maxFrequencyHz = 2;
+
+  shared_architecture.SimpleModeBandwidthType bandwidth_type = 3;
+  shared_architecture.SimpleModeMeasuringMode measuring_mode = 4;
+  shared_architecture.SimpleModeAntennaPolarization antenna_polarization = 5;
+  shared_architecture.SimpleModeAntennaAttenuation antennaAttenuation = 6;
+}
+
+message MeasuringPresetGrpc {
+  int32 id = 1;
+  google.protobuf.StringValue name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp last_used_at = 4;
+  bool is_created_automatically = 5;
+  shared_architecture.MeasurementConfigGrpc measurement_config = 6;
+  AntennaAccessGrpc antenna_access = 7;
+  ReceiverAccessGrpc receiver_access = 8;
+  google.protobuf.StringValue name_with_date = 9;
+  map<int32, string> settings = 10;
+}
+
+message MeasuringPresetListReply {
+  repeated MeasuringPresetGrpc MeasuringPresets = 1;
+}
+
+message ChangeDeviceModeRequest {
+  shared_architecture.ReceiverModeGrpc mode = 1;
+}
+
+message ChangeDeviceModeReply {
+  bool success = 1;
+  google.protobuf.StringValue error_message = 2;
+}
+
+message ScpiExecutionRequest { google.protobuf.StringValue query = 1; }
+
+message ScpiExecutionReply {
+  google.protobuf.StringValue answer = 1;
+  bool success = 2;
+}
+
+message StartScheduledMeasuringRequest {
+  shared_architecture.MeasuringScheduleGrpc measuring_schedule = 1;
+}
+
+message StartDirectMeasuringRequest {
+  shared_architecture.MeasurementConfigGrpc measurement_config = 1;
+}
+
+message StopMeasuringReply { google.protobuf.StringValue reason = 1; }
+
+message RotorAngleGrpc {
+  int32 angle = 1;
+  bool rotor_enabled = 2;
+  bool is_invalid = 3;
+}
+
+message RotatorAlignmentGrpc {
+  RotorAngleGrpc azimuth = 1;
+  RotorAngleGrpc polarization = 2;
+  RotorAngleGrpc height = 3;
+}
+
+message AlignmentLimitsGrpc {
+  RotorAngleGrpc min_azimuth = 1;
+  RotorAngleGrpc max_azimuth = 2;
+  RotorAngleGrpc min_polarization = 3;
+  RotorAngleGrpc max_polarization = 4;
+  RotorAngleGrpc min_height = 5;
+  RotorAngleGrpc max_height = 6;
+  bool device_recognized = 7;
+  google.protobuf.StringValue Idn = 8;
+}
+
+message RotatorAlignmentRequest { RotatorAlignmentGrpc rotator_alignment = 1; }
+
+message RotatorAlignmentReply {
+  RotatorAlignmentGrpc rotator_alignment = 1;
+  AlignmentLimitsGrpc alignment_limits = 2;
+}
+
+message StoreMeasuringPresetRequest {
+  google.protobuf.StringValue name = 1;
+  shared_architecture.MeasurementConfigGrpc measurement_config = 2;
+}
+
+message DeleteMeasuringPresetRequest { int32 id = 1; }
+
+message UpdateMeasuringPresetRequest {
+  int32 id = 1;
+  shared_architecture.MeasurementConfigGrpc measurement_config = 2;
+  google.protobuf.StringValue new_name = 3;
+}
+
+message RemoteModeRequest { bool remote_mode = 1; }
+
+message RemoteModeReply { bool remote_mode = 1; }
+
+message ApplyMeasuringPresetRequest { int32 measuring_preset_id = 1; }
+
+message ApplyMeasuringPresetReply {
+  AllSettingsReply all_settings = 1;
+  google.protobuf.Int32Value connected_antenna_id = 2;
+  bool is_rotator_attached = 3;
+  shared_architecture.ReceiverModeGrpc receiver_mode = 4;
+}

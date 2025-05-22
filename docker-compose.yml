@@ -1,5 +1,6 @@
 version: "3.9"
 services:
+
   backend:
     build: ./backend
     container_name: sweb_backend
@@ -9,6 +10,13 @@ services:
       - db
     environment:
       DJANGO_SETTINGS_MODULE: sweb.settings
+    env_file: 
+      - ./backend/.env
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # For local dev, you might mount code if you want hot reload
     # volumes:
     #   - ./backend:/app
@@ -17,8 +25,11 @@ services:
     build: ./frontend
     container_name: sweb_frontend
     ports:
-      - "8080:80"
+      - "3000:3000"  # Changed from 8080 to avoid conflict with Envoy
+    environment:
+      - VITE_API_URL=http://localhost:9090  # Updated to point to new Envoy port
     depends_on:
+      - envoy
       - backend
     # For local dev, you might mount code if you want hot reload
     # volumes:
@@ -31,5 +42,27 @@ services:
       POSTGRES_DB: swebdb
       POSTGRES_USER: swebuser
       POSTGRES_PASSWORD: swebpass
+    env_file:
+      - ./db/.env
     ports:
       - "5432:5432"
+
+  envoy:
+    build:
+      context: ./etc
+      dockerfile: envoy/Dockerfile
+    container_name: envoy_proxy
+    ports:
+      - "9090:9090"     # Changed from 8080 to 9090 for HTTP/REST API endpoint
+      - "50051:50051"   # gRPC endpoint for device connections
+      - "9901:9901"     # Envoy admin interface
+    volumes:
+      - ./etc/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    networks:
+      - frontend_net
+      - backend_net
+    restart: unless-stopped
+
+networks:
+  frontend_net:    # Network for frontend <-> Envoy communication
+  backend_net:     # Network for Envoy <-> Devices communication
