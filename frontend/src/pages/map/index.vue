@@ -15,9 +15,14 @@
             item-title="driver_name"
             item-children="receivers"
             item-value="id"
+            :load-children="loadReceivers"
+            @click="handleNodeClick"
+            @update:open="handleOpen"
+            v-model:open="openItems"
             dense
             hoverable
             activatable
+            open-on-click
             class="mb-12 pb-3"
           >
             <!-- Optional: Custom appearance for tree items -->
@@ -107,8 +112,9 @@
 </template>
     
     <script>
-import { ref, computed } from "vue";
+import { ref, computed, onUnmounted } from "vue";
 import { useStore } from "vuex";
+import { ApiClient } from '@/grpcModule/client';
 import mapComonent from "@/components/map/index.vue";
 // import mapComonente from "@/pages/map/index.vue";
 import measurementComponent from "@/pages/measurements/index.vue";
@@ -127,6 +133,8 @@ export default {
   },
 
   setup() {
+    const client = new ApiClient('http://localhost:9090');
+    const activeStreams = ref(new Map()); // Track active streams by driver ID
     const StatusToColor = {
       READY: "success",
       UNAVAILABLE: "blue-grey-darken-2",
@@ -135,6 +143,7 @@ export default {
     };
     const selectSensors = ref([]);
     const showMeasurementDialoge = ref(false);
+    const openItems = ref([]);  // Add this line to track open items
 
     const store = useStore();
     const fallbackLocations = ref([
@@ -156,6 +165,119 @@ export default {
       // For example, you might want to dispatch a Vuex action or call an API endpoint
     };
 
+    const loadReceivers = async (item) => {
+      console.log("Loading receivers for item:", item);
+      if (!item.driver_name) return []; // Only process driver items
+
+      try {
+        // Start handshake and stream for this driver
+        const username = ''; // Add appropriate username if needed
+        const serverToken = ''; // Add appropriate token if needed
+        const isGuestUser = false;
+
+        // Perform handshake
+        const token = await client.handshake(
+          item.id.toString(),
+          username,
+          serverToken,
+          isGuestUser,
+          item.ip, // Make sure your item has ip property
+          item.port // Make sure your item has port property
+        );
+
+        // Start streaming
+        const stream = client.streamReceiverList(
+          item.id.toString(),
+          (data) => {
+            // Update the receivers in the store or local state
+            item.receivers = data;
+          },
+          (error) => {
+            console.error('Stream error:', error);
+            activeStreams.value.delete(item.id);
+          },
+          item.ip,
+          item.port
+        );
+
+        // Store the stream reference
+        activeStreams.value.set(item.id, stream);
+
+        return item.receivers || [];
+      } catch (error) {
+        console.error('Failed to load receivers:', error);
+        return [];
+      }
+    };
+
+    const handleNodeClick = (item) => {
+      if (item.driver_name) {
+        loadReceivers(item);
+      }
+    };
+
+    const handleOpen = async (items) => {
+      console.log("Treeview items opened:", items);
+      
+      // Get all previously open items
+      const previousItems = [...openItems.value];
+      
+      // First handle closed items
+      const closedItems = previousItems.filter(id => !items.includes(id));
+      closedItems.forEach(itemId => {
+        console.log("Node closed, stopping stream for:", itemId);
+        const existingStream = activeStreams.value.get(itemId);
+        if (existingStream) {
+          try {
+            existingStream.cancel();
+            activeStreams.value.delete(itemId);
+            // Find the item and clear its receivers
+            const closedItem = locationsList.value.find(item => item.id === itemId);
+            if (closedItem) {
+              closedItem.receivers = [];
+            }
+          } catch (error) {
+            console.error('Error stopping stream:', error);
+          }
+        }
+      });
+
+      // Then handle newly opened items
+      const newlyOpenedItems = items.filter(id => !previousItems.includes(id));
+      for (const newId of newlyOpenedItems) {
+        const openedItem = locationsList.value.find(item => item.id === newId);
+        if (openedItem && openedItem.driver_name) {
+          try {
+            // Cancel any existing stream first
+            const existingStream = activeStreams.value.get(openedItem.id);
+            if (existingStream) {
+              existingStream.cancel();
+              activeStreams.value.delete(openedItem.id);
+            }
+            
+            // Start new stream
+            await loadReceivers(openedItem);
+          } catch (error) {
+            console.error('Failed to start stream:', error);
+          }
+        }
+      }
+
+      // Update open items state
+      openItems.value = items;
+    };
+
+    // Cleanup function
+    onUnmounted(() => {
+      // Cancel all active streams
+      activeStreams.value.forEach((stream) => {
+        if (stream) {
+          stream.cancel();
+        }
+      });
+      activeStreams.value.clear();
+    });
+
     return {
       fallbackLocations,
       locationsList,
@@ -163,6 +285,10 @@ export default {
       selectSensors,
       startMeasurements,
       showMeasurementDialoge,
+      openItems,  // Add this to the return object
+      handleOpen,
+      handleNodeClick,
+      loadReceivers,
     };
 
     // Sample data for the table:
@@ -195,15 +321,13 @@ body,
 }
 .sensors-sidebar {
   overflow-y: scroll;
-  height: calc(100vh - 80px); /* Adjust height to account for the app bar */
-}
+  height: calc(100vh - 80px); /* Adjust height to account for the app bar */}
 
-/* Optional: just a helper class name for no-scroll if needed */
 .no-scroll {
-  overflow: hidden !important;
+  overflow: hidden !important; overflow: hidden !important;
 }
 .v-treeview .v-input__details {
-  display: none;
+  display: none; 
 }
 .start-btn {
   position: fixed;
@@ -211,4 +335,4 @@ body,
   left: 12px;
 }
 </style>
-  
+

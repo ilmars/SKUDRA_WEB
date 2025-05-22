@@ -3,7 +3,7 @@ import axios from 'axios'
 import { mockLocations } from '@/mock/locationsMock'
 
 // Default API endpoint, adjust as needed for your environment
-const API_URL = '/api/sensors/instances/'
+const API_URL = '/api/sensors/instances/?receivers=false'
 // const USE_MOCK = process.env.NODE_ENV === 'development'
 const USE_MOCK = false 
 

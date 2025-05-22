@@ -90,6 +90,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+LOGIN_REDIRECT_URL = "/api/user/"
+# LOGOUT_REDIRECT_URL = "/api/logout/"
+
 # Add debug toolbar only if DEBUG or ENVIRONMENT is "test"
 if DEBUG or ENVIRONMENT == 'test':
     INSTALLED_APPS += ['debug_toolbar']

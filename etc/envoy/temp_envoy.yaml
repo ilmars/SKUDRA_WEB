@@ -10,20 +10,6 @@ static_resources:
     http2_protocol_options: {}
     lb_policy: round_robin
     load_assignment:
-      cluster_name: test_service_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 10.0.222.39
-                port_value: 19010
-    name: test_service_cluster
-    type: strict_dns
-  - connect_timeout: 1s
-    http2_protocol_options: {}
-    lb_policy: round_robin
-    load_assignment:
       cluster_name: device5_cluster
       endpoints:
       - lb_endpoints:
@@ -136,15 +122,15 @@ static_resources:
     http2_protocol_options: {}
     lb_policy: round_robin
     load_assignment:
-      cluster_name: device30_cluster
+      cluster_name: device1_cluster
       endpoints:
       - lb_endpoints:
         - endpoint:
             address:
               socket_address:
-                address: 10.0.222.39
+                address: 10.0.50.162
                 port_value: 19010
-    name: device30_cluster
+    name: device1_cluster
     type: strict_dns
   - connect_timeout: 1s
     http2_protocol_options: {}
@@ -159,20 +145,6 @@ static_resources:
                 address: 10.0.222.147
                 port_value: 19010
     name: device12_cluster
-    type: strict_dns
-  - connect_timeout: 1s
-    http2_protocol_options: {}
-    lb_policy: round_robin
-    load_assignment:
-      cluster_name: device1_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 10.0.50.162
-                port_value: 19010
-    name: device1_cluster
     type: strict_dns
   - connect_timeout: 1s
     http2_protocol_options: {}
@@ -212,46 +184,11 @@ static_resources:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          access_log:
-          - name: envoy.access_loggers.stdout
-            typed_config:
-              '@type': type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-              log_format:
-                text_format_source:
-                  inline_string: '[%START_TIME%] %REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%
-                    %PROTOCOL% %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT%
-                    %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%"
-                    "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%"
-                    "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS%
-                    %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME%
-                    %ROUTE_NAME%
-
-                    '
           codec_type: auto
           http_filters:
           - name: envoy.filters.http.cors
             typed_config:
               '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
-          - name: envoy.filters.http.grpc_json_transcoder
-            typed_config:
-              '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
-              auto_mapping: true
-              convert_grpc_status: true
-              ignore_unknown_query_parameters: true
-              match_incoming_request_route: true
-              print_options:
-                add_whitespace: true
-                always_print_enums_as_ints: false
-                always_print_primitive_fields: true
-                preserve_proto_field_names: true
-              proto_descriptor: /etc/envoy/test_proto.pb
-              services:
-              - welcome_grpc.WelcomeGrpc
-              - simple_mode_grpc.SimpleModeGrpc
-              - advanced_mode_grpc.AdvancedModeGrpc
-          - name: envoy.filters.http.grpc_web
-            typed_config:
-              '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
           - name: envoy.filters.http.router
             typed_config:
               '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -262,27 +199,6 @@ static_resources:
               - '*'
               name: local_service
               routes:
-              - match:
-                  headers:
-                  - name: :method
-                    string_match:
-                      exact: OPTIONS
-                  prefix: /
-                name: preflight_catch_all
-                route:
-                  cluster: test_service_cluster
-                  idle_timeout: 0s
-                  timeout: 0s
-              - match:
-                  headers:
-                  - name: :method
-                    string_match:
-                      exact: GET
-                  path: /v1/testcall
-                name: test_service_route
-                route:
-                  cluster: test_service_cluster
-                  timeout: 30s
               - match:
                   headers:
                   - name: :method
@@ -306,16 +222,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device5_cluster
                   idle_timeout: 0s
@@ -343,16 +250,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device10_cluster
                   idle_timeout: 0s
@@ -380,16 +278,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device11_cluster
                   idle_timeout: 0s
@@ -417,16 +306,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device4_cluster
                   idle_timeout: 0s
@@ -454,16 +334,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device9_cluster
                   idle_timeout: 0s
@@ -491,16 +362,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device8_cluster
                   idle_timeout: 0s
@@ -528,16 +390,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device7_cluster
                   idle_timeout: 0s
@@ -565,92 +418,9 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device6_cluster
-                  idle_timeout: 0s
-                  timeout: 0s
-              - match:
-                  headers:
-                  - name: :method
-                    string_match:
-                      exact: POST
-                  - name: x-device-id
-                    string_match:
-                      exact: device30
-                  path: /api/v1/handshake
-                name: device30_handshake
-                route:
-                  cluster: device30_cluster
-                  timeout: 30s
-              - match:
-                  path: /api/v1/receivers/stream
-                  query_parameters:
-                  - name: deviceId
-                    string_match:
-                      exact: device30
-                name: device30_stream
-                response_headers_to_add:
-                - header:
-                    key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
-                route:
-                  cluster: device30_cluster
-                  idle_timeout: 0s
-                  timeout: 0s
-              - match:
-                  headers:
-                  - name: :method
-                    string_match:
-                      exact: POST
-                  - name: x-device-id
-                    string_match:
-                      exact: device12
-                  path: /api/v1/handshake
-                name: device12_handshake
-                route:
-                  cluster: device12_cluster
-                  timeout: 30s
-              - match:
-                  path: /api/v1/receivers/stream
-                  query_parameters:
-                  - name: deviceId
-                    string_match:
-                      exact: device12
-                name: device12_stream
-                response_headers_to_add:
-                - header:
-                    key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
-                route:
-                  cluster: device12_cluster
                   idle_timeout: 0s
                   timeout: 0s
               - match:
@@ -676,18 +446,37 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device1_cluster
+                  idle_timeout: 0s
+                  timeout: 0s
+              - match:
+                  headers:
+                  - name: :method
+                    string_match:
+                      exact: POST
+                  - name: x-device-id
+                    string_match:
+                      exact: device12
+                  path: /api/v1/handshake
+                name: device12_handshake
+                route:
+                  cluster: device12_cluster
+                  timeout: 30s
+              - match:
+                  path: /api/v1/receivers/stream
+                  query_parameters:
+                  - name: deviceId
+                    string_match:
+                      exact: device12
+                name: device12_stream
+                response_headers_to_add:
+                - header:
+                    key: Content-Type
+                    value: application/json
+                route:
+                  cluster: device12_cluster
                   idle_timeout: 0s
                   timeout: 0s
               - match:
@@ -713,16 +502,7 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device2_cluster
                   idle_timeout: 0s
@@ -750,31 +530,11 @@ static_resources:
                 response_headers_to_add:
                 - header:
                     key: Content-Type
-                    value: text/event-stream
-                - header:
-                    key: Transfer-Encoding
-                    value: chunked
-                - header:
-                    key: Cache-Control
-                    value: no-cache
-                - header:
-                    key: Connection
-                    value: keep-alive
+                    value: application/json
                 route:
                   cluster: device3_cluster
                   idle_timeout: 0s
                   timeout: 0s
-              typed_per_filter_config:
-                envoy.filters.http.cors:
-                  '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
-                  allow_credentials: true
-                  allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout,x-device-id,x-device-ip,x-device-port,authorization,accept,origin,sec-fetch-site,sec-fetch-mode,sec-fetch-dest,referer,device-port,device-ip,token
-                  allow_methods: GET, PUT, DELETE, POST, OPTIONS
-                  allow_origin_string_match:
-                  - safe_regex:
-                      google_re2: {}
-                      regex: .*
-                  max_age: '1728000'
           stat_prefix: grpc_json_transcoder
           stream_idle_timeout: 0s
     name: grpc_web_listener

@@ -1,6 +1,7 @@
 import grpc
 from skudra.GrpcProtos import welcome_pb2 as welcome, welcome_pb2_grpc as welcome_grpc
 from skudra.GrpcProtos import common_pb2
+from skudra.GrpcProtos import advanced_mode_grpc_pb2 as advanced, advanced_mode_grpc_pb2_grpc as advanced_grpc
 
 from decimal import Decimal
 import sys
@@ -41,6 +42,11 @@ def build_sensor_fields(handshake_dict):
     return sensor_fields
 
 def get_decimal_from_decimal_value(decimal_value):
+    print("_______________________________________________________________", decimal_value)
+    if not decimal_value:
+        return 0
+    if 'units' not in decimal_value or 'nanos' not in decimal_value:
+        return 0
     return Decimal(decimal_value['units']) + (Decimal(decimal_value['nanos']) / Decimal(10**9))
 
 def update_regular_sensor_states(ip, port):
@@ -73,22 +79,23 @@ def build_state_update(handshake_dict):
 
 def handshake(username, password, server_token, is_guest_user, ip, port):
     channel = grpc.insecure_channel(f'{ip}:{port}')
-    stub = welcome_grpc.WelcomeGrpcStub(channel)
+    # stub = welcome_grpc.WelcomeGrpcStub(channel)
+    stub = advanced_grpc.AdvancedModeGrpcStub(channel)
     
     if username and password:
-        request = welcome.HandshakeRequest(
-            username=welcome.StringValue(value=username),
-            password=welcome.StringValue(value=password)
+        request = advanced.AdvancedModeHandshakeRequest(
+            username=advanced.StringValue(value=username),
+            password=advanced.StringValue(value=password)
         )
     elif server_token:
-        request = welcome.HandshakeRequest(
-            server_token=welcome.StringValue(value=server_token)
+        request = advanced.AdvancedModeHandshakeRequest(
+            server_token=advanced.StringValue(value=server_token)
         )
     else:
-        request = welcome.HandshakeRequest()
+        request = advanced.AdvancedModeHandshakeRequest()
         
     try:
-        response = stub.Handshake(request)
+        response = stub.AdvancedModeHandshake(request)
     except grpc.RpcError as e:
         error_msg = str(e)
         error_code = e.code().name if hasattr(e, 'code') else "UNKNOWN"

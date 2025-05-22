@@ -38,3 +38,7 @@ matplotlib==3.7.1
 # -- Geospatial (Optional) --
 geopy==2.3.0
 # pyproj==3.5.0
+
+# -- Docker --
+docker-py>=4.4.1
+PyYAML>=6.0

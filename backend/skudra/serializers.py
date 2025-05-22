@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
+from rest_framework.validators import UniqueTogetherValidator
 from django.utils import timezone
 from django.db import transaction
 
@@ -23,15 +24,22 @@ class ReceiverSerializer(serializers.HyperlinkedModelSerializer):
         # Create the sensor instance
         
 class SensorSerializer(serializers.HyperlinkedModelSerializer):
-
     coordinates = serializers.SerializerMethodField()
-    receivers = ReceiverSerializer(many=True, read_only=True)
+    receivers = serializers.SerializerMethodField()
     
     class Meta:
         model = Sensor
         fields = ('url', 'id', 'ip', 'port', 'driver_name', 'user_has_access', 'state', 
                   'location', 'coordinates', 'receivers')
         read_only_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+        
+        # validators = [
+        #     UniqueTogetherValidator(
+        #         queryset=Sensor.objects.all(),
+        #         fields   = ("ip", "port"),
+        #         message  = "A sensor with this IP/port already exists."
+        #     )
+        # ]
         
     def get_longitude(self, obj):
         return obj.longitude()
@@ -41,14 +49,22 @@ class SensorSerializer(serializers.HyperlinkedModelSerializer):
     def get_coordinates(self, obj):
         return obj.get_coordinates()
 
+    def get_receivers(self, obj):
+        # Check if receivers should be included
+        request = self.context.get('request')
+        if request and request.query_params.get('receivers') == 'false':
+            return []
+        
+        # If receivers should be included, serialize them
+        return ReceiverSerializer(obj.receivers.all(), many=True, context=self.context).data
+
     def create(self, validated_data):
-        update_sensor_state(validated_data)
-        return super().create(validated_data)
+        
+        return update_sensor_state(validated_data)
     
     def update(self, instance, validated_data):
         # Update the sensor instance with the new data
-        update_sensor_state(validated_data)
-        return super().update(instance, validated_data)
+        return update_sensor_state(validated_data)
         
 
 
