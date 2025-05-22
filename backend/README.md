@@ -58,6 +58,7 @@
 ## gRPC Endpoints (Port 9090)
 
 ### Handshake Protocol
+client.js file available in /frontend/scripts/
 ```javascript
 const client = new ApiClient('http://localhost:9090');
 
